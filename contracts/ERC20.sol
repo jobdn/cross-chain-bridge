@@ -69,6 +69,11 @@ contract ERC20 is AccessControl, IERC20 {
         return _symbol;
     }
 
+    function setMinterAndBurnerRoles(address addr) public {
+        grantRole(MINTER_ROLE, addr);
+        grantRole(BURNER_ROLE, addr);
+    }
+
     function transfer(address to, uint256 amount)
         public
         override
