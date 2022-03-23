@@ -8,12 +8,9 @@ contract ERC20 is AccessControl, IERC20 {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowed;
     uint256 private _totalSupply;
-    string public _name;
-    string public _symbol;
-    uint256 public _decimals;
-
-    event Transfer(address indexed from, address indexed to, uint256 amount);
-    event Approval(address indexed from, address indexed to, uint256 amount);
+    string private _name;
+    string private _symbol;
+    uint256 private _decimals;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -43,24 +40,38 @@ contract ERC20 is AccessControl, IERC20 {
     }
 
     // View functions
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address owner) public view returns (uint256) {
+    function balanceOf(address owner) public view override returns (uint256) {
         return _balances[owner];
     }
 
     function allowance(address owner, address spender)
         public
         view
+        override
         returns (uint256)
     {
         return _allowed[owner][spender];
     }
 
+    function decimals() public view override returns (uint256) {
+        return _decimals;
+    }
+
+    function name() public view override returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view override returns (string memory) {
+        return _symbol;
+    }
+
     function transfer(address to, uint256 amount)
         public
+        override
         notZeroAddress(to)
         returns (bool)
     {
@@ -77,7 +88,7 @@ contract ERC20 is AccessControl, IERC20 {
         address from,
         address to,
         uint256 amount
-    ) public notZeroAddress(to) returns (bool) {
+    ) public override notZeroAddress(to) returns (bool) {
         require(amount <= _balances[from], "Not enough tokens");
         require(
             amount <= _allowed[from][msg.sender],
@@ -94,6 +105,7 @@ contract ERC20 is AccessControl, IERC20 {
 
     function approve(address spender, uint256 amount)
         public
+        override
         notZeroAddress(spender)
         returns (bool)
     {
@@ -105,6 +117,7 @@ contract ERC20 is AccessControl, IERC20 {
 
     function increaseAllowance(address spender, uint256 addedValue)
         public
+        override
         notZeroAddress(spender)
         returns (bool)
     {
@@ -115,6 +128,7 @@ contract ERC20 is AccessControl, IERC20 {
 
     function decreaseAllowance(address spender, uint256 subtracredValue)
         public
+        override
         notZeroAddress(spender)
         returns (bool)
     {
@@ -128,7 +142,11 @@ contract ERC20 is AccessControl, IERC20 {
         return true;
     }
 
-    function mint(address owner, uint256 amount) public notZeroAddress(owner) {
+    function mint(address owner, uint256 amount)
+        public
+        override
+        notZeroAddress(owner)
+    {
         require(hasRole(MINTER_ROLE, msg.sender), "You are not owner");
         _balances[owner] += amount;
         _totalSupply += amount;
@@ -136,7 +154,11 @@ contract ERC20 is AccessControl, IERC20 {
         emit Transfer(address(0), owner, amount);
     }
 
-    function burn(address owner, uint256 amount) public notZeroAddress(owner) {
+    function burn(address owner, uint256 amount)
+        public
+        override
+        notZeroAddress(owner)
+    {
         require(hasRole(BURNER_ROLE, msg.sender), "You are not owner");
         require(
             amount <= _balances[owner],
