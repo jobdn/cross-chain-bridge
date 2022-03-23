@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
+import { BigNumberish } from "ethers";
 import { ethers } from "hardhat";
 import { Bridge, Bridge__factory, ERC20, ERC20__factory } from "../typechain";
 
@@ -47,16 +48,24 @@ describe("Bridge", function () {
     await bscToken.setMinterAndBurnerRoles(bscBridge.address);
   });
 
+  const swap = async (
+    recipient: string,
+    amount: BigNumberish,
+    nonce: number
+  ) => {
+    await ethBridge.swap(
+      recipient,
+      amount,
+      ETHER_CHAIN_ID,
+      BSC_CHAIN_ID,
+      await ethToken.symbol(),
+      nonce
+    );
+  };
+
   describe("Swap", () => {
     it("Should call swap", async () => {
-      await ethBridge.swap(
-        owner.address,
-        ethers.utils.parseEther("0.1"),
-        ETHER_CHAIN_ID,
-        BSC_CHAIN_ID,
-        await ethToken.symbol(),
-        1
-      );
+      await swap(owner.address, ethers.utils.parseEther("0.1"), 1);
       expect(await ethToken.balanceOf(owner.address)).to.equal(
         ethers.utils.parseEther("0.9")
       );
@@ -65,115 +74,74 @@ describe("Bridge", function () {
     });
 
     it("Should fail if existing transaction", async () => {
-      await ethBridge.swap(
-        owner.address,
-        ethers.utils.parseEther("0.1"),
-        ETHER_CHAIN_ID,
-        BSC_CHAIN_ID,
-        await ethToken.symbol(),
-        1
-      );
+      await swap(owner.address, ethers.utils.parseEther("0.1"), 1);
       await expect(
-        ethBridge.swap(
-          owner.address,
-          ethers.utils.parseEther("0.1"),
-          ETHER_CHAIN_ID,
-          BSC_CHAIN_ID,
-          await ethToken.symbol(),
-          1
-        )
+        swap(owner.address, ethers.utils.parseEther("0.1"), 1)
       ).to.be.revertedWith("Existing transaction");
     });
   });
 
+  const redeem = async (
+    recipient: string,
+    amount: BigNumberish,
+    nonce: number
+  ) => {
+    const msg = ethers.utils.solidityKeccak256(
+      ["address", "uint256", "uint256", "uint256", "string", "uint256"],
+      [
+        recipient,
+        amount,
+        ETHER_CHAIN_ID,
+        BSC_CHAIN_ID,
+        await ethToken.symbol(),
+        nonce,
+      ]
+    );
+    const signedMsg = await backend.signMessage(ethers.utils.arrayify(msg));
+    const { v, r, s } = ethers.utils.splitSignature(signedMsg);
+
+    await bscBridge.redeem(
+      recipient,
+      amount,
+      ETHER_CHAIN_ID,
+      BSC_CHAIN_ID,
+      await ethToken.symbol(),
+      nonce,
+      v,
+      r,
+      s
+    );
+  };
+
   describe("Redeem", () => {
-    const swapAndRedeem = async () => {
-      await ethBridge.swap(
-        owner.address,
-        ethers.utils.parseEther("0.1"),
-        ETHER_CHAIN_ID,
-        BSC_CHAIN_ID,
-        await ethToken.symbol(),
-        1
-      );
-      // Set validator. It is the backend address
+    it("Should call redeem", async () => {
+      await swap(owner.address, ethers.utils.parseEther("0.1"), 1);
       await bscBridge.setValidator(backend.address);
-      const msg = ethers.utils.solidityKeccak256(
-        ["address", "uint256", "uint256", "uint256", "string", "uint256"],
-        [
-          owner.address,
-          ethers.utils.parseEther("0.1"),
-          ETHER_CHAIN_ID,
-          BSC_CHAIN_ID,
-          await ethToken.symbol(),
-          1,
-        ]
-      );
-      const signedMsg = await backend.signMessage(ethers.utils.arrayify(msg));
-      const { v, r, s } = ethers.utils.splitSignature(signedMsg);
-
-      await bscBridge.redeem(
-        owner.address,
-        ethers.utils.parseEther("0.1"),
-        ETHER_CHAIN_ID,
-        BSC_CHAIN_ID,
-        await ethToken.symbol(),
-        1,
-        v,
-        r,
-        s
-      );
-
+      await redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 1);
       expect(await bscToken.balanceOf(owner.address)).to.equal(
         ethers.utils.parseEther("0.1")
       );
-    };
-    it("Should call redeem", async () => {
-      await swapAndRedeem();
+
+      await swap(owner.address, ethers.utils.parseEther("0.1"), 2);
+      await bscBridge.setValidator(backend.address);
+      await redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 2);
+      expect(await bscToken.balanceOf(owner.address)).to.equal(
+        ethers.utils.parseEther("0.2")
+      );
     });
 
     it("Should fail if send two the same transactions", async () => {
-      const v = 28;
-      const r =
-        "0x8934ae4bf1457bbc2b551f4b2226bcf0f1b52c7033570f32c1c843e9411bbb6e";
-      const s =
-        "0x5163a22691d3b38e3afec1420b264e26a1cb2a69d92fe125257d095a947a33d7";
-      await swapAndRedeem();
+      await swap(owner.address, ethers.utils.parseEther("0.1"), 1);
+      await bscBridge.setValidator(backend.address);
+      await redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 1);
       await expect(
-        bscBridge.redeem(
-          owner.address,
-          ethers.utils.parseEther("0.1"),
-          ETHER_CHAIN_ID,
-          BSC_CHAIN_ID,
-          await ethToken.symbol(),
-          1,
-          v,
-          r,
-          s
-        )
+        redeem(owner.address, ethers.utils.parseEther("0.1"), 1)
       ).to.be.revertedWith("Existing transaction");
     });
 
     it("Should fail if wrong signature", async () => {
-      const v = 20;
-      const r =
-        "0x8934ae4bf1457bbc2b551f4b2226bcf0f1b52c7033570f32c1c843e9411bbb6e";
-      const s =
-        "0x5163a22691d3b38e3afec1420b264e26a1cb2a69d92fe125257d095a947a33d7";
-      await swapAndRedeem();
       await expect(
-        bscBridge.redeem(
-          owner.address,
-          // There is changing here
-          ethers.utils.parseEther("0.2"),
-          ETHER_CHAIN_ID,
-          BSC_CHAIN_ID,
-          await ethToken.symbol(),
-          1,
-          v,
-          r,
-          s
-        )
+        redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 1)
       ).to.be.revertedWith("Invalid signature");
     });
 
