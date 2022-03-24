@@ -17,14 +17,21 @@ contract Bridge is AccessControl {
     mapping(bytes32 => bool) public transactionsHash;
     ERC20 token;
     address private validator;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     constructor(ERC20 _token) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
         token = _token;
     }
 
+    function changeToken(ERC20 _newToken) public {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        token = _newToken;
+    }
+
     function setValidator(address _validator) public {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not admin");
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
         validator = _validator;
     }
 
