@@ -20,6 +20,12 @@ module.exports = {
       "error",
       { ignores: ["modules"] },
     ],
+    "node/no-unpublished-import": [
+      "error",
+      {
+        allowModules: ["hardhat/config"],
+      },
+    ],
     camelcase: "off",
     "node/no-missing-import": [
       "error",
