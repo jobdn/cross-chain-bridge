@@ -15,6 +15,7 @@ contract Bridge is AccessControl {
         uint256 nonce
     );
     mapping(bytes32 => bool) public transactionsHash;
+    mapping(address => bool) public availableTokensForSwap;
     ERC20 token;
     address private validator;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -25,13 +26,24 @@ contract Bridge is AccessControl {
         token = _token;
     }
 
-    function changeToken(ERC20 _newToken) public {
+    modifier onlyAdmin() {
         require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        _;
+    }
+
+    function changeToken(ERC20 _newToken) public onlyAdmin {
         token = _newToken;
     }
 
-    function setValidator(address _validator) public {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+    function includeToken(address tokenAddr) public onlyAdmin {
+        availableTokensForSwap[tokenAddr] = true;
+    }
+
+    function excludeToken(address tokenAddr) public onlyAdmin {
+        availableTokensForSwap[tokenAddr] = false;
+    }
+
+    function setValidator(address _validator) public onlyAdmin {
         validator = _validator;
     }
 

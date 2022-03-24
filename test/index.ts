@@ -151,4 +151,24 @@ describe("Bridge", function () {
       ).to.be.revertedWith("Not admin");
     });
   });
+
+  describe('Include, exclude and change token', () => {
+    /**
+     * TODO: 
+     *  Сделать вот эти тесты
+     *  Добавить проверки на допустимый для отправки токен в swap
+     *  */ 
+    it("Should include token" async () => {
+      await ethBridge.includeToken(bscToken.address);
+      expect(await ethBridge.availableTokensForSwap(bscToken.address)).to.equal(true);
+    })
+    it("Should exclude token" async () => {
+      await ethBridge.includeToken(bscToken.address);
+      await ethBridge.;
+      expect(await ethBridge.availableTokensForSwap(bscToken.address)).to.equal(true);
+    })
+    it("Should change token", async () => {
+      await ethBridge.
+    })
+   })
 });
