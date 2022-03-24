@@ -71,6 +71,9 @@ describe("Bridge", function () {
       );
 
       // TODO: check emited event
+      ethBridge.on("SwapInitialized", (sender, recipient, amount, nonce) => {
+        console.log(sender, recipient, amount, nonce);
+      })
     });
 
     it("Should fail if existing transaction", async () => {
@@ -157,18 +160,18 @@ describe("Bridge", function () {
      * TODO: 
      *  Сделать вот эти тесты
      *  Добавить проверки на допустимый для отправки токен в swap
-     *  */ 
-    it("Should include token" async () => {
+     *  */
+    it("Should include token", async () => {
       await ethBridge.includeToken(bscToken.address);
       expect(await ethBridge.availableTokensForSwap(bscToken.address)).to.equal(true);
     })
-    it("Should exclude token" async () => {
+    it("Should exclude token", async () => {
       await ethBridge.includeToken(bscToken.address);
-      await ethBridge.;
-      expect(await ethBridge.availableTokensForSwap(bscToken.address)).to.equal(true);
+      await ethBridge.excludeToken(bscToken.address);
+      expect(await ethBridge.availableTokensForSwap(bscToken.address)).to.equal(false);
     })
     it("Should change token", async () => {
-      await ethBridge.
+      await ethBridge.changeToken(ethToken.address);
     })
-   })
+  })
 });
