@@ -1,9 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// TODO: delete
-import "hardhat/console.sol";
-
 import "./ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -12,11 +9,13 @@ contract Bridge is AccessControl {
         address indexed sender,
         address indexed recipient,
         uint256 amount,
+        uint256 chainFrom,
+        uint256 chainTo,
+        string symbol,
         uint256 nonce
     );
     mapping(bytes32 => bool) public transactionsHash;
-    mapping(address => bool) public availableTokensForSwap;
-    ERC20 token;
+    ERC20 public token;
     address private validator;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
@@ -33,14 +32,6 @@ contract Bridge is AccessControl {
 
     function changeToken(ERC20 _newToken) public onlyAdmin {
         token = _newToken;
-    }
-
-    function includeToken(address tokenAddr) public onlyAdmin {
-        availableTokensForSwap[tokenAddr] = true;
-    }
-
-    function excludeToken(address tokenAddr) public onlyAdmin {
-        availableTokensForSwap[tokenAddr] = false;
     }
 
     function setValidator(address _validator) public onlyAdmin {
@@ -87,7 +78,15 @@ contract Bridge is AccessControl {
         require(!transactionsHash[msgHash], "Existing transaction");
         transactionsHash[msgHash] = true;
         token.burn(msg.sender, amount);
-        emit SwapInitialized(msg.sender, recipient, amount, nonce);
+        emit SwapInitialized(
+            msg.sender,
+            recipient,
+            amount,
+            chainTo,
+            chainFrom,
+            symbol,
+            nonce
+        );
     }
 
     function getEthMsgHash(bytes32 _msgHash) internal pure returns (bytes32) {
@@ -119,6 +118,7 @@ contract Bridge is AccessControl {
         bytes32 r,
         bytes32 s
     ) public {
+        require(msg.sender == recipient, "Not recipient");
         bytes32 msgHash = getMsgHash(
             recipient,
             amount,
