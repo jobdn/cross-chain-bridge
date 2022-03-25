@@ -8,6 +8,8 @@ async function main() {
     // Change 'name' and 'symbol' parameters here. See ../config.ts
     config.ETH_TOKEN_NAME,
     config.ETH_TOKEN_SYMBOL,
+    // config.BSC_TOKEN_NAME,
+    // config.BSC_TOKEN_SYMBOL,
     config.TOKEN_DECIMALS
   )) as ERC20;
 

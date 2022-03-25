@@ -10,12 +10,14 @@ task("swap", "Swap tokens from one chain to another")
   .addParam("symbol", "Symbol of token")
   .addParam("nonce", "Some number to different messages hash")
   .setAction(async (taskArgs, hre) => {
+    // 
     const { recipient, amount, chainFrom, chainTo, symbol, nonce } = taskArgs;
     const bridge = (await hre.ethers.getContractAt(
       "Bridge",
-      config.BRIDGE
+      config.ETH_BRIDGE
+      // config.BSC_BRIDGE
     )) as Bridge;
 
     await bridge.swap(recipient, amount, chainFrom, chainTo, symbol, nonce);
-    console.log(``);
+    console.log(`${amount} tokens can be send to ${recipient}`);
   });

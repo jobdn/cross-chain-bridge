@@ -5,14 +5,6 @@ import { ethers } from "hardhat";
 import { Bridge, Bridge__factory, ERC20, ERC20__factory } from "../typechain";
 import { SwapInitializedEvent } from "../typechain/Bridge";
 
-/**
- * TODO:
- *  - Задеплоить в тестовую сеть
-    - Написать таск на swap, redeem
-    - Верифицировать контракт
-    ////- Дописать тест, если msg.sender == recipient
- */
-
 describe("Bridge", function () {
   let ethBridge: Bridge,
     bscBridge: Bridge,

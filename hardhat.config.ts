@@ -27,9 +27,8 @@ const config: HardhatUserConfig = {
   solidity: "0.8.4",
   networks: {
     rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${
-        process.env.ALCHEMY_PRIVATE_KEY || ""
-      }`,
+      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_PRIVATE_KEY || ""
+        }`,
       accounts:
         process.env.ACCOUNT_PRIVATE_KEY !== undefined
           ? [process.env.ACCOUNT_PRIVATE_KEY]
