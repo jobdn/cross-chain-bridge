@@ -57,15 +57,6 @@ describe("Bridge", function () {
     await bscToken.setMinterAndBurnerRoles(bscBridge.address);
   });
 
-  interface SwapEventArgs {
-    recipient: string;
-    amount: BigNumberish;
-    chainFrom: number;
-    chainTo: number;
-    symbol: string;
-    nonce: number;
-  }
-
   const swap = async (
     recipient: string,
     amount: BigNumberish,
@@ -101,15 +92,15 @@ describe("Bridge", function () {
     });
   });
 
-  const redeem = async (
+  const getSignature = async (
     recipient: string,
     amount: BigNumberish,
     chainFrom: number,
     chainTo: number,
     symbol: string,
     nonce: number,
-    sender: SignerWithAddress = owner
-  ) => {
+    // sender: SignerWithAddress = owner
+  ): Promise<string> => {
     const msg = ethers.utils.solidityKeccak256(
       ["address", "uint256", "uint256", "uint256", "string", "uint256"],
       [
@@ -121,27 +112,16 @@ describe("Bridge", function () {
         nonce,
       ]
     );
-    const signedMsg = await backend.signMessage(ethers.utils.arrayify(msg));
-    const { v, r, s } = ethers.utils.splitSignature(signedMsg);
-
-    await bscBridge.connect(sender).redeem(
-      recipient,
-      amount,
-      chainFrom,
-      chainTo,
-      symbol,
-      nonce,
-      v,
-      r,
-      s
-    );
+    return await backend.signMessage(ethers.utils.arrayify(msg));
   };
 
   describe("Redeem", () => {
     it("Should call redeem", async () => {
       const { recipient, amount, chainFrom, chainTo, symbol, nonce } = (await swap(owner.address, ethers.utils.parseEther("0.1"), 1)).args;
       await bscBridge.setValidator(backend.address);
-      await redeem(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber());
+      const signature = await getSignature(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber());
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+      await bscBridge.redeem(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber(), v, r, s)
       expect(await bscToken.balanceOf(owner.address)).to.equal(
         ethers.utils.parseEther("0.1")
       );
@@ -150,15 +130,17 @@ describe("Bridge", function () {
     it("Should fail if sender is not recipient", async () => {
       const { recipient, amount, chainFrom, chainTo, symbol, nonce } = (await swap(owner.address, ethers.utils.parseEther("0.1"), 1)).args;
       await bscBridge.setValidator(backend.address);
+      const signature = await getSignature(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber());
+      const { v, r, s } = ethers.utils.splitSignature(signature);
       await expect(
-        redeem(
+        bscBridge.connect(acc1).redeem(
           recipient,
           amount,
           chainFrom.toNumber(),
           chainTo.toNumber(),
           symbol,
           nonce.toNumber(),
-          acc1
+          v, r, s
         )
       ).to.be.revertedWith("Not recipient");
       expect(await bscToken.balanceOf(owner.address)).to.equal(
@@ -169,30 +151,38 @@ describe("Bridge", function () {
     it("Should fail if send two the same transactions", async () => {
       const { recipient, amount, chainFrom, chainTo, symbol, nonce } = (await swap(owner.address, ethers.utils.parseEther("0.1"), 1)).args;
       await bscBridge.setValidator(backend.address);
-      await redeem(
+      const signature = await getSignature(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber());
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+      await bscBridge.redeem(
         recipient,
         amount,
         chainFrom.toNumber(),
         chainTo.toNumber(),
         symbol,
         nonce.toNumber(),
+        v, r, s
       )
       await expect(
-        redeem(
+        bscBridge.redeem(
           recipient,
           amount,
           chainFrom.toNumber(),
           chainTo.toNumber(),
           symbol,
           nonce.toNumber(),
+          v, r, s
         )
       ).to.be.revertedWith("Existing transaction");
     });
 
     it("Should fail if wrong signature", async () => {
-      // await bscBridge.setValidator(backend.address);
+      const { recipient, amount, chainFrom, chainTo, symbol, nonce } = (await swap(owner.address, ethers.utils.parseEther("0.1"), 1)).args;
+      await bscBridge.setValidator(backend.address);
+      const signature = await getSignature(recipient, amount, chainFrom.toNumber(), chainTo.toNumber(), symbol, nonce.toNumber());
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+      await bscBridge.setValidator(backend.address);
       await expect(
-        redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 1, 2, "SYM", 2)
+        bscBridge.redeem(owner.address, ethers.utils.parseUnits("0.1", "ether"), 1, 2, "SYM", 2, v, r, s)
       ).to.be.revertedWith("Invalid signature");
     });
 
