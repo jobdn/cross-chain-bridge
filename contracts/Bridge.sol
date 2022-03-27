@@ -17,16 +17,22 @@ contract Bridge is AccessControl {
     mapping(bytes32 => bool) public transactionsHash;
     ERC20 public token;
     address private validator;
+    uint256 private _chainId;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     constructor(ERC20 _token) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         token = _token;
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        _chainId = chainId;
     }
 
     modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        require(hasRole(ADMIN_ROLE, msg.sender), "Bridge: not admin");
         _;
     }
 
@@ -41,7 +47,6 @@ contract Bridge is AccessControl {
     function getMsgHash(
         address recipient,
         uint256 amount,
-        uint256 chainFrom,
         uint256 chainTo,
         string memory symbol,
         uint256 nonce
@@ -51,7 +56,7 @@ contract Bridge is AccessControl {
                 abi.encodePacked(
                     recipient,
                     amount,
-                    chainFrom,
+                    _chainId,
                     chainTo,
                     symbol,
                     nonce
@@ -62,28 +67,17 @@ contract Bridge is AccessControl {
     function swap(
         address recipient,
         uint256 amount,
-        uint256 chainFrom,
         uint256 chainTo,
         string memory symbol,
         uint256 nonce
     ) public {
-        bytes32 msgHash = getMsgHash(
-            recipient,
-            amount,
-            chainFrom,
-            chainTo,
-            symbol,
-            nonce
-        );
-        require(!transactionsHash[msgHash], "Existing transaction");
-        transactionsHash[msgHash] = true;
         token.burn(msg.sender, amount);
         emit SwapInitialized(
             msg.sender,
             recipient,
             amount,
+            _chainId,
             chainTo,
-            chainFrom,
             symbol,
             nonce
         );
@@ -99,7 +93,6 @@ contract Bridge is AccessControl {
         @dev We need to create message using "\x19Ethereum Signed Message:\n32"
         @param recipient Address that receive tokens from chain with "chainFrom" id
         @param amount Amount of receiving tokens
-        @param chainFrom Chain id from wich tokens are sent
         @param chainTo Chain id to wich tokens are sent
         @param symbol Symbol of sended tokens
         @param nonce Some number from creating message hash
@@ -110,7 +103,6 @@ contract Bridge is AccessControl {
     function redeem(
         address recipient,
         uint256 amount,
-        uint256 chainFrom,
         uint256 chainTo,
         string memory symbol,
         uint256 nonce,
@@ -119,17 +111,10 @@ contract Bridge is AccessControl {
         bytes32 s
     ) public {
         require(msg.sender == recipient, "Not recipient");
-        bytes32 msgHash = getMsgHash(
-            recipient,
-            amount,
-            chainFrom,
-            chainTo,
-            symbol,
-            nonce
-        );
-        require(!transactionsHash[msgHash], "Existing transaction");
+        bytes32 msgHash = getMsgHash(recipient, amount, chainTo, symbol, nonce);
+        require(!transactionsHash[msgHash], "Bridge: existing transaction");
         bytes32 ethMsgHash = getEthMsgHash(msgHash);
-        require(checkSign(ethMsgHash, v, r, s), "Invalid signature");
+        require(checkSign(ethMsgHash, v, r, s), "Bridge: invalid signature");
         transactionsHash[msgHash] = true;
         token.mint(recipient, amount);
     }

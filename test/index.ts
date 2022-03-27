@@ -13,7 +13,7 @@ describe("Bridge", function () {
     owner: SignerWithAddress,
     backend: SignerWithAddress,
     acc1: SignerWithAddress;
-  const ETHER_CHAIN_ID = 1;
+  // const ETHER_CHAIN_ID = 1;
   const BSC_CHAIN_ID = 2;
 
   beforeEach(async () => {
@@ -57,7 +57,7 @@ describe("Bridge", function () {
     const swapTx = await ethBridge.swap(
       recipient,
       amount,
-      ETHER_CHAIN_ID,
+      // ETHER_CHAIN_ID,
       BSC_CHAIN_ID,
       await ethToken.symbol(),
       nonce
@@ -76,13 +76,6 @@ describe("Bridge", function () {
       expect(await ethToken.balanceOf(owner.address)).to.equal(
         ethers.utils.parseEther("0.9")
       );
-    });
-
-    it("Should fail if existing transaction", async () => {
-      await swap(owner.address, ethers.utils.parseEther("0.1"), 1);
-      await expect(
-        swap(owner.address, ethers.utils.parseEther("0.1"), 1)
-      ).to.be.revertedWith("Existing transaction");
     });
   });
 
@@ -126,7 +119,7 @@ describe("Bridge", function () {
       await bscBridge.redeem(
         recipient,
         amount,
-        chainFrom.toNumber(),
+        // chainFrom.toNumber(),
         chainTo.toNumber(),
         symbol,
         nonce.toNumber(),
@@ -161,19 +154,17 @@ describe("Bridge", function () {
       const { v, r, s } = ethers.utils.splitSignature(signature);
 
       await expect(
-        bscBridge
-          .connect(acc1)
-          .redeem(
-            recipient,
-            amount,
-            chainFrom.toNumber(),
-            chainTo.toNumber(),
-            symbol,
-            nonce.toNumber(),
-            v,
-            r,
-            s
-          )
+        bscBridge.connect(acc1).redeem(
+          recipient,
+          amount,
+          // chainFrom.toNumber(),
+          chainTo.toNumber(),
+          symbol,
+          nonce.toNumber(),
+          v,
+          r,
+          s
+        )
       ).to.be.revertedWith("Not recipient");
       expect(await bscToken.balanceOf(owner.address)).to.equal(0);
     });
@@ -199,8 +190,10 @@ describe("Bridge", function () {
       );
       const { v, r, s } = ethers.utils.splitSignature(signature);
 
-      await bscBridge.redeem(recipient, amount,
-        chainFrom.toNumber(),
+      await bscBridge.redeem(
+        recipient,
+        amount,
+        // chainFrom.toNumber(),
         chainTo.toNumber(),
         symbol,
         nonce.toNumber(),
@@ -212,7 +205,7 @@ describe("Bridge", function () {
         bscBridge.redeem(
           recipient,
           amount,
-          chainFrom.toNumber(),
+          // chainFrom.toNumber(),
           chainTo.toNumber(),
           symbol,
           nonce.toNumber(),
@@ -220,7 +213,7 @@ describe("Bridge", function () {
           r,
           s
         )
-      ).to.be.revertedWith("Existing transaction");
+      ).to.be.revertedWith("Bridge: existing transaction");
     });
 
     it("Should fail if wrong signature", async () => {
@@ -249,7 +242,7 @@ describe("Bridge", function () {
         bscBridge.redeem(
           recipient,
           amount,
-          chainFrom.toNumber(),
+          // chainFrom.toNumber(),
           chainTo.toNumber(),
           symbol,
           // Wrong nonce
@@ -258,13 +251,13 @@ describe("Bridge", function () {
           r,
           s
         )
-      ).to.be.revertedWith("Invalid signature");
+      ).to.be.revertedWith("Bridge: invalid signature");
     });
 
     it("Should fail if not admin try send the validator address", async () => {
       await expect(
         bscBridge.connect(acc1).setValidator(backend.address)
-      ).to.be.revertedWith("Not admin");
+      ).to.be.revertedWith("Bridge: not admin");
     });
   });
 

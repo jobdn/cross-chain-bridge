@@ -27,11 +27,6 @@ module.exports = {
       },
     ],
     camelcase: "off",
-    "node/no-missing-import": [
-      "error",
-      {
-        tryExtensions: [".js", ".json", ".node", ".ts"],
-      },
-    ],
+    "node/no-missing-import": "off",
   },
 };
